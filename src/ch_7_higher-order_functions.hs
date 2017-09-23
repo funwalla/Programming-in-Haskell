@@ -1,4 +1,5 @@
 import Data.Char
+import Data.List
 
 -- 7.1 Basic concepts
 
@@ -122,9 +123,9 @@ or_l = foldl (||) False
 and_l :: [Bool] -> Bool
 and_l = foldl (&&) True
 
-foldl' :: (a -> b -> a) -> a -> [b] -> a
-foldl' f v [] = v
-foldl' f v (x:xs) = foldl' f (f v x) xs
+foldl'' :: (a -> b -> a) -> a -> [b] -> a
+foldl'' f v [] = v
+foldl'' f v (x:xs) = foldl'' f (f v x) xs
 
 -- 7.5 The composition operator
 
@@ -197,3 +198,53 @@ decode = map (chr . bin2int) . chop8
 
 -- 7.7 Voting algorithms
 
+-- First past the post
+votes :: [String]
+votes = ["Red", "Blue", "Green", "Blue", "Blue", "Red"]
+
+count :: Eq a  => a -> [a] -> Int
+--count x xs = sum [1 | x'  <- xs, x' == x]
+count x = length . filter (==x)
+
+rmdups :: Eq a => [a] -> [a]
+rmdups [] = []
+rmdups (x:xs) = x : filter (/= x) (rmdups xs)
+
+{-  let f = filter:
+rmdups [1, 2, 1, 2, 3]
+= 1 : f (/= 1) (rmdups [2,1,2,3])
+= 1 : f (/= 1) (2 : f (/= 2) (rmdups [1,2,3]))
+= 1 : f (/= 1) (2 : f (/= 2) ( 1 : f (/= 1) (rmdups [2,3])))
+= 1 : f (/= 1) (2 : f (/= 2) ( 1 : f (/= 1) (2 : f (/= 2) (rmdups [3]))))
+= 1 : f (/= 1) (2 : f (/= 2) ( 1 : f (/= 1) (2 : f (/= 2) (3 : f (/= 3) (rmdups [])))))
+= 1 : f (/= 1) (2 : f (/= 2) ( 1 : f (/= 1) (2 : f (/= 2) (3 : f (/= 3) []))))
+= 1 : f (/= 1) (2 : f (/= 2) ( 1 : f (/= 1) (2 : f (/= 2) [3])))
+= 1 : f (/= 1) (2 : f (/= 2) ( 1 : f (/= 1) [2,3]))
+= 1 : f (/= 1) [2,1,3]) = [1,2,3]
+-}
+
+-- requires import Data.List (see beginning of file)
+result :: Ord a => [a] -> [(Int, a)]
+result vs = sort [(count v vs, v) | v <- rmdups vs]
+
+winner :: Ord a => [a] -> a
+winner = (snd . last . result)
+
+-- Alternative vote
+ballots :: [[[Char]]]
+ballots = [["Red", "Green"], ["Blue"], ["Green", "Red", "Blue"],
+           ["Blue", "Green", "Red"], ["Green"]]
+
+rmempty :: Eq a => [[a]]  -> [[a]]
+rmempty = filter (/= [])
+
+elim :: Eq a => a -> [[a]] -> [[a]]
+elim x = map (filter (/= x))
+
+rank :: Ord a => [[a]] -> [a]
+rank = map snd . result . map head
+
+winner' :: Ord a => [[a]] -> a
+winner' bs = case rank (rmempty bs) of
+               [c]    -> c
+               (c:cs) -> winner' (elim c bs)
